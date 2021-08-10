@@ -1,0 +1,4 @@
+scikit-image
+imgaug
+numpy
+scipy

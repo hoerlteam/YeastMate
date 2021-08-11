@@ -36,6 +36,7 @@ RUN pip install -e detectron2_repo
 
 ADD yeastmatedetector /home/appuser/YeastMateDetector/yeastmatedetector
 ADD setup.py /home/appuser/YeastMateDetector/setup.py
+ADD README.md /home/appuser/YeastMateDetector/README.md 
 RUN cd YeastMateDetector && python setup.py install
 
 RUN pip install git+https://github.com/davidbunk/BentoML.git

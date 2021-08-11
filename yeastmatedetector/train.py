@@ -14,10 +14,10 @@ from detectron2.utils.logger import setup_logger
 from detectron2.engine import default_argument_parser, DefaultTrainer, launch, default_setup
 from detectron2.data import build_detection_test_loader, build_detection_train_loader, DatasetCatalog, MetadataCatalog
 
-from data import MaskDetectionLoader, DictGetter
-from utils import copy_code, initialize_new_config_values
+from .data import MaskDetectionLoader, DictGetter
+from .utils import copy_code, initialize_new_config_values
 
-from models import *
+from .models import *
 
 class Trainer(DefaultTrainer):
     @classmethod

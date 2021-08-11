@@ -1,5 +1,5 @@
-from ops import paste_masks_in_image
-from masks import BitMasks
+from .ops import paste_masks_in_image
+from .masks import BitMasks
 import detectron2
 
 detectron2.layers.paste_masks_in_image = paste_masks_in_image
@@ -19,19 +19,15 @@ from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.modeling import GeneralizedRCNN
 from detectron2.config import CfgNode as CN
 
-from models import MultiMaskRCNNConvUpsampleHead as MultiR
-from postprocessing import postproc_multimask
+from .models import MultiMaskRCNNConvUpsampleHead as MultiR
+from .postprocessing import postproc_multimask
+from .utils import initialize_new_config_values
 
 class YeastMatePredictor():
     def __init__(self, cfg, weights=None):
         self.cfg = get_cfg()
-        self.cfg.MODEL.ROI_HEADS.NUM_MASK_CLASSES = None
-        self.cfg.MAX_VIS_PROPS = None
-
-        self.cfg.POSTPROCESSING = CN()
-        self.cfg.POSTPROCESSING.POSSIBLE_COMPS = None
-        self.cfg.POSTPROCESSING.OPTIONAL_OBJECT_SCORE_THRESHOLD = None
-        self.cfg.POSTPROCESSING.PARENT_OVERRIDE_THRESHOLD = None
+        
+        self.cfg = initialize_new_config_values(self.cfg)
 
         if not torch.cuda.is_available():
             self.cfg.MODEL.DEVICE = 'cpu'
@@ -53,7 +49,6 @@ class YeastMatePredictor():
         height, width = image.shape
 
         image = np.expand_dims(image, axis=0)
-        ### REMOVE
         image = np.repeat(image, 3, axis=0)
 
         image = torch.as_tensor(image)  
@@ -70,7 +65,7 @@ class YeastMatePredictor():
 
         if norm:
             image = image.astype(np.float32)
-            lq, uq = np.percentile(image, [1, 99])
+            lq, uq = np.percentile(image, [1.5, 98.5])
             image = rescale_intensity(image, in_range=(lq,uq), out_range=(0,1))
         else:
             image = image.astype(np.float32)

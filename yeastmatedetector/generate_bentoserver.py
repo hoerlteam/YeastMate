@@ -1,7 +1,7 @@
 import argparse
-from inference import YeastMatePredictor
+from .inference import YeastMatePredictor
 
-from bentoapi import YeastMate
+from .bentoapi import YeastMate
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Create BentoML container.')

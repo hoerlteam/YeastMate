@@ -160,7 +160,7 @@ def postproc_multimask(inst, possible_compositions,
             accepted_box_idxs = []
             
             for j, boxidx in enumerate(inidx):
-                if scores[boxidx] > 0.9 and labels[boxidx] == 0:
+                if scores[boxidx] > score_thresholds[0] and labels[boxidx] == 0:
                     fullmask = masks[n][:,int(boxes[boxidx][1]):int(boxes[boxidx][3]),int(boxes[boxidx][0]):int(boxes[boxidx][2])]
                     thresh_mask = masks[boxidx][1][int(boxes[boxidx][1]):int(boxes[boxidx][3]),int(boxes[boxidx][0]):int(boxes[boxidx][2])] > 0.
                     

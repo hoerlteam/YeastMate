@@ -1,10 +1,3 @@
-from .ops import paste_masks_in_image
-from .masks import BitMasks
-import detectron2
-
-detectron2.layers.paste_masks_in_image = paste_masks_in_image
-detectron2.structures.BitMasks = BitMasks
-
 import os
 import json
 import torch
@@ -16,10 +9,10 @@ from skimage.exposure import rescale_intensity
 
 from detectron2.config import get_cfg
 from detectron2.checkpoint import DetectionCheckpointer
-from detectron2.modeling import GeneralizedRCNN
 from detectron2.config import CfgNode as CN
 
 from .models import MultiMaskRCNNConvUpsampleHead as MultiR
+from .multimaskrcnn import MultiMaskMRCNN
 from .postprocessing import postproc_multimask
 from .utils import initialize_new_config_values
 
@@ -37,7 +30,7 @@ class YeastMatePredictor():
         if weights is not None:
             self.cfg.MODEL.WEIGHTS = weights
 
-        self.model = GeneralizedRCNN(self.cfg)
+        self.model = MultiMaskMRCNN(self.cfg)
         self.model.to(torch.device(self.cfg.MODEL.DEVICE))
         self.model.eval()
 

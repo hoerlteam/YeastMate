@@ -106,7 +106,7 @@ def postproc_multimask(inst, possible_compositions,
     masks = [mask.cpu().numpy() for mask in masks]
 
     scores = list(inst.scores)
-    scores = [score.cpu().numpy() for score in scores]
+    scores = [float(score.cpu().numpy()) for score in scores]
 
     classes = list(inst.pred_classes)
     labels = [cls.cpu().numpy() for cls in classes]

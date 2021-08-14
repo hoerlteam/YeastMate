@@ -1,10 +1,3 @@
-from .ops import paste_masks_in_image
-from .masks import BitMasks
-import detectron2
-
-detectron2.layers.paste_masks_in_image = paste_masks_in_image
-detectron2.structures.BitMasks = BitMasks
-
 import os
 from datetime import datetime
 

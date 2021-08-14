@@ -1,3 +1,6 @@
+# adapted from detectron2.structures.masks.py (v0.5)
+# Copyright (c) Facebook, Inc. and its affiliates.
+
 import copy
 import itertools
 import numpy as np
@@ -6,37 +9,42 @@ import torch
 
 from detectron2.structures import Boxes
 from detectron2.layers.roi_align import ROIAlign
+from detectron2.structures import ROIMasks, PolygonMasks
+from detectron2.utils.memory import retry_if_cuda_oom
 
-import numpy as np
 
-class BitMasks:
+class BitMasksMulticlass:
     """
     This class stores the segmentation masks for all objects in one image, in
     the form of bitmaps.
 
     Attributes:
-        tensor: bool Tensor of N,H,W, representing N instances in the image.
+        tensor: bool Tensor of N,C,H,W, representing N instances in the image.
     """
 
     def __init__(self, tensor: Union[torch.Tensor, np.ndarray]):
         """
         Args:
-            tensor: bool Tensor of N,H,W, representing N instances in the image.
+            tensor: bool Tensor of N,C,H,W, representing N instances in the image.
         """
         device = tensor.device if isinstance(tensor, torch.Tensor) else torch.device("cpu")
-        tensor = torch.as_tensor(tensor, dtype=torch.uint8, device=device)
-        assert tensor.dim() == 3, tensor.size()
-        self.image_size = tensor.shape[1:]
+        
+        # CHANGE: do not cast to byte, we want raw unthresholded "soft" mask
+        # tensor = torch.as_tensor(tensor, dtype=torch.uint8, device=device)
+        assert tensor.dim() == 4, tensor.size()
+        self.image_size = tensor.shape[2:]
         self.tensor = tensor
 
-    def to(self, *args: Any, **kwargs: Any) -> "BitMasks":
-        return BitMasks(self.tensor.to(*args, **kwargs))
+    @torch.jit.unused
+    def to(self, *args: Any, **kwargs: Any) -> "BitMasksMulticlass":
+        return BitMasksMulticlass(self.tensor.to(*args, **kwargs))
 
     @property
     def device(self) -> torch.device:
         return self.tensor.device
 
-    def __getitem__(self, item: Union[int, slice, torch.ByteTensor]) -> "BitMasks":
+    @torch.jit.unused
+    def __getitem__(self, item: Union[int, slice, torch.BoolTensor]) -> "BitMasksMulticlass":
         """
         Returns:
             BitMasks: Create a new :class:`BitMasks` by indexing.
@@ -52,16 +60,19 @@ class BitMasks:
         subject to Pytorch's indexing semantics.
         """
         if isinstance(item, int):
-            return BitMasks(self.tensor[item].view(1, -1))
+            return BitMasksMulticlass(self.tensor[item].view(1, -1))
         m = self.tensor[item]
-        assert m.dim() == 3, "Indexing on BitMasks with {} returns a tensor with shape {}!".format(
+        assert m.dim() == 4, "Indexing on BitMasks with {} returns a tensor with shape {}!".format(
             item, m.shape
         )
-        return BitMasks(m)
+        return BitMasksMulticlass(m)
 
+    @torch.jit.unused
     def __iter__(self) -> torch.Tensor:
         yield from self.tensor
 
+   
+    @torch.jit.unused
     def __repr__(self) -> str:
         s = self.__class__.__name__ + "("
         s += "num_instances={})".format(len(self.tensor))
@@ -83,7 +94,7 @@ class BitMasks:
     @staticmethod
     def from_polygon_masks(
         polygon_masks: Union["PolygonMasks", List[List[np.ndarray]]], height: int, width: int
-    ) -> "BitMasks":
+    ) -> "BitMasksMulticlass":
         """
         Args:
             polygon_masks (list[list[ndarray]] or PolygonMasks)
@@ -92,7 +103,7 @@ class BitMasks:
         if isinstance(polygon_masks, PolygonMasks):
             polygon_masks = polygon_masks.polygons
         masks = [polygons_to_bitmask(p, height, width) for p in polygon_masks]
-        return BitMasks(torch.stack([torch.from_numpy(x) for x in masks]))
+        return BitMasksMulticlass(torch.stack([torch.from_numpy(x) for x in masks]))
 
     def crop_and_resize(self, boxes: torch.Tensor, mask_size: int) -> torch.Tensor:
         """
@@ -124,7 +135,9 @@ class BitMasks:
             .forward(bit_masks[:, None, :, :], rois)
             .squeeze(1)
         )
-       # output = output >= 0.5
+
+        # CHANGE: do not threshold
+        # output = output >= 0.5
         return output
 
     def get_bounding_boxes(self) -> Boxes:
@@ -146,7 +159,7 @@ class BitMasks:
         return Boxes(boxes)
 
     @staticmethod
-    def cat(bitmasks_list: List["BitMasks"]) -> "BitMasks":
+    def cat(bitmasks_list: List["BitMasksMulticlass"]) -> "BitMasksMulticlass":
         """
         Concatenates a list of BitMasks into a single BitMasks
 
@@ -158,7 +171,78 @@ class BitMasks:
         """
         assert isinstance(bitmasks_list, (list, tuple))
         assert len(bitmasks_list) > 0
-        assert all(isinstance(bitmask, BitMasks) for bitmask in bitmasks_list)
+        assert all(isinstance(bitmask, BitMasksMulticlass) for bitmask in bitmasks_list)
 
         cat_bitmasks = type(bitmasks_list[0])(torch.cat([bm.tensor for bm in bitmasks_list], dim=0))
         return cat_bitmasks
+
+
+class ROIMasksMulticlass(ROIMasks):
+    """
+    Represent masks by N smaller masks defined in some ROIs. Once ROI boxes are given,
+    full-image bitmask can be obtained by "pasting" the mask on the region defined
+    by the corresponding ROI box.
+    """
+
+    def __init__(self, tensor: torch.Tensor):
+        """
+        Args:
+            tensor: (N, M, M) mask tensor that defines the mask within each ROI.
+        """
+        if tensor.dim() != 4:
+            raise ValueError("ROIMasksMulticlass must take a masks of 4 dimension.")
+        self.tensor = tensor
+
+    def to(self, device: torch.device) -> "ROIMasksMulticlass":
+        return ROIMasksMulticlass(self.tensor.to(device))
+
+    @property
+    def device(self) -> "device":
+        return self.tensor.device
+
+    def __len__(self):
+        return self.tensor.shape[0]
+
+    def __getitem__(self, item) -> "ROIMasksMulticlass":
+        """
+        Returns:
+            ROIMasksMulticlass: Create a new :class:`ROIMasksMulticlass` by indexing.
+
+        The following usage are allowed:
+
+        1. `new_masks = masks[2:10]`: return a slice of masks.
+        2. `new_masks = masks[vector]`, where vector is a torch.BoolTensor
+           with `length = len(masks)`. Nonzero elements in the vector will be selected.
+
+        Note that the returned object might share storage with this object,
+        subject to Pytorch's indexing semantics.
+        """
+        t = self.tensor[item]
+        if t.dim() != 4:
+            raise ValueError(
+                f"Indexing on ROIMasks with {item} returns a tensor with shape {t.shape}!"
+            )
+        return ROIMasksMulticlass(t)
+
+    @torch.jit.unused
+    def __repr__(self) -> str:
+        s = self.__class__.__name__ + "("
+        s += "num_instances={})".format(len(self.tensor))
+        return s
+
+    @torch.jit.unused
+    def to_bitmasks(self, boxes: torch.Tensor, height, width, threshold=0.5):
+        """
+        Args:
+
+        """
+        from .ops import paste_masks_in_image
+
+        paste = retry_if_cuda_oom(paste_masks_in_image)
+        bitmasks = paste(
+            self.tensor,
+            boxes,
+            (height, width),
+            threshold=threshold,
+        )
+        return BitMasksMulticlass(bitmasks)

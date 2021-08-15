@@ -30,9 +30,6 @@ class YeastMate(bentoml.BentoService):
                     parent_override_threshold=self.artifacts['model'].metadata['parent_override_threshold'],
                     score_thresholds=annotations)
 
-        if mask is None:
-            mask = np.zeros(shape, dtype=np.uint16)
-
         mask = Image.fromarray(mask)
         imagebytes = BytesIO()
         mask.save(imagebytes, format="TIFF")

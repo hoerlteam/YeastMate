@@ -11,7 +11,7 @@ from bentoml.artifact import PytorchModelArtifact
 
 from yeastmatedetector.inference import YeastMatePredictor
 
-@bentoml.env(docker_base_image='yeastmate:latest')
+@bentoml.env(docker_base_image='yeastmate:trainer')
 @bentoml.artifacts([PytorchModelArtifact('model')])
 class YeastMate(bentoml.BentoService):
     @bentoml.api(input=AnnotatedImageInput(pilmode='F'))

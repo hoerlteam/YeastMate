@@ -1,5 +1,5 @@
 import argparse
-#ßfrom yeastmatedetector.inference import YeastMatePredictor
+from yeastmatedetector.inference import YeastMatePredictor
 
 from bentoapi import YeastMate
 

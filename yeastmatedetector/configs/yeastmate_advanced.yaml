@@ -1,7 +1,7 @@
 MODEL:
   DEVICE: "cuda"
   WEIGHTS: ""
-  META_ARCHITECTURE: "GeneralizedRCNN"
+  META_ARCHITECTURE: "MultiMaskMRCNN"
   MASK_ON: True
   BACKBONE:
     FREEZE_AT: 0

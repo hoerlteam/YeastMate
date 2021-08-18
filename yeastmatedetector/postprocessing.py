@@ -164,6 +164,11 @@ def postproc_multimask(inst, possible_compositions,
                     fullmask = masks[n][:,int(boxes[boxidx][1]):int(boxes[boxidx][3]),int(boxes[boxidx][0]):int(boxes[boxidx][2])]
                     thresh_mask = masks[boxidx][1][int(boxes[boxidx][1]):int(boxes[boxidx][3]),int(boxes[boxidx][0]):int(boxes[boxidx][2])] > single_cell_mask_treshold
                     
+                    # ignore single cells with empty masks
+                    # (would lead to NaNs, exceptions during LAP assignment)
+                    if thresh_mask.sum() == 0:
+                        continue
+
                     k = np.mean(fullmask[:,thresh_mask],axis=(1))
                     mask_scores.append(k)
                     accepted_box_idxs.append(j)
@@ -176,7 +181,7 @@ def postproc_multimask(inst, possible_compositions,
             res = _resolve_subobjects(int(labels[n]), mask_scores, possible_compositions,
                                       optional_object_score_threshold=optional_object_score_threshold,
                                       parent_override_thresh=parent_override_thresh)
-            
+
             if res is None:
                 continue # TODO: handle
                 

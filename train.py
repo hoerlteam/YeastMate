@@ -11,6 +11,7 @@ from yeastmatedetector.data import MaskDetectionLoader, DictGetter
 from yeastmatedetector.utils import copy_code, initialize_new_config_values
 
 from yeastmatedetector.models import *
+from yeastmatedetector.multimaskrcnn import *
 
 class Trainer(DefaultTrainer):
     @classmethod

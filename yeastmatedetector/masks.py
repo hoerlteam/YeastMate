@@ -25,14 +25,12 @@ class BitMasksMulticlass:
     def __init__(self, tensor: Union[torch.Tensor, np.ndarray]):
         """
         Args:
-            tensor: bool Tensor of N,C,H,W, representing N instances in the image.
+            tensor: bool Tensor of N,H,W, representing N instances in the image.
         """
         device = tensor.device if isinstance(tensor, torch.Tensor) else torch.device("cpu")
-        
-        # CHANGE: do not cast to byte, we want raw unthresholded "soft" mask
-        # tensor = torch.as_tensor(tensor, dtype=torch.uint8, device=device)
-        assert tensor.dim() == 4, tensor.size()
-        self.image_size = tensor.shape[2:]
+        tensor = torch.as_tensor(tensor, dtype=torch.uint8, device=device)
+        assert tensor.dim() == 3, tensor.size()
+        self.image_size = tensor.shape[1:]
         self.tensor = tensor
 
     @torch.jit.unused
@@ -44,25 +42,11 @@ class BitMasksMulticlass:
         return self.tensor.device
 
     @torch.jit.unused
-    def __getitem__(self, item: Union[int, slice, torch.BoolTensor]) -> "BitMasksMulticlass":
-        """
-        Returns:
-            BitMasks: Create a new :class:`BitMasks` by indexing.
-
-        The following usage are allowed:
-
-        1. `new_masks = masks[3]`: return a `BitMasks` which contains only one mask.
-        2. `new_masks = masks[2:10]`: return a slice of masks.
-        3. `new_masks = masks[vector]`, where vector is a torch.BoolTensor
-           with `length = len(masks)`. Nonzero elements in the vector will be selected.
-
-        Note that the returned object might share storage with this object,
-        subject to Pytorch's indexing semantics.
-        """
+    def __getitem__(self, item: Union[int, slice, torch.ByteTensor]) -> "BitMasksMulticlass":
         if isinstance(item, int):
             return BitMasksMulticlass(self.tensor[item].view(1, -1))
         m = self.tensor[item]
-        assert m.dim() == 4, "Indexing on BitMasks with {} returns a tensor with shape {}!".format(
+        assert m.dim() == 3, "Indexing on BitMasks with {} returns a tensor with shape {}!".format(
             item, m.shape
         )
         return BitMasksMulticlass(m)
@@ -82,28 +66,7 @@ class BitMasksMulticlass:
         return self.tensor.shape[0]
 
     def nonempty(self) -> torch.Tensor:
-        """
-        Find masks that are non-empty.
-
-        Returns:
-            Tensor: a BoolTensor which represents
-                whether each mask is empty (False) or non-empty (True).
-        """
         return self.tensor.flatten(1).any(dim=1)
-
-    @staticmethod
-    def from_polygon_masks(
-        polygon_masks: Union["PolygonMasks", List[List[np.ndarray]]], height: int, width: int
-    ) -> "BitMasksMulticlass":
-        """
-        Args:
-            polygon_masks (list[list[ndarray]] or PolygonMasks)
-            height, width (int)
-        """
-        if isinstance(polygon_masks, PolygonMasks):
-            polygon_masks = polygon_masks.polygons
-        masks = [polygons_to_bitmask(p, height, width) for p in polygon_masks]
-        return BitMasksMulticlass(torch.stack([torch.from_numpy(x) for x in masks]))
 
     def crop_and_resize(self, boxes: torch.Tensor, mask_size: int) -> torch.Tensor:
         """
@@ -136,8 +99,6 @@ class BitMasksMulticlass:
             .squeeze(1)
         )
 
-        # CHANGE: do not threshold
-        # output = output >= 0.5
         return output
 
     def get_bounding_boxes(self) -> Boxes:

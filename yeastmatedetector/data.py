@@ -14,8 +14,15 @@ from imgaug import augmenters as iaa
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
-from detectron2.structures import BoxMode
+from detectron2.structures import (
+    BitMasks,
+    Boxes,
+    BoxMode,
+    Instances,
+)
 from detectron2.data import DatasetMapper, detection_utils as utils
+
+from .masks import BitMasksMulticlass
 
 class DictGetter:
     def __init__(self, dataset, train_path=None):
@@ -29,6 +36,34 @@ class DictGetter:
         else:
             raise ValueError("Training data path is not set!")
 
+def annotations_to_instances(annos, image_size, mask_format="bitmaskmulticlass"):
+    """
+    Adapted from detectron2 (https://github.com/facebookresearch/detectron2)
+    """
+
+    boxes = [BoxMode.convert(obj["bbox"], obj["bbox_mode"], BoxMode.XYXY_ABS) for obj in annos]
+    target = Instances(image_size)
+    target.gt_boxes = Boxes(boxes)
+
+    classes = [int(obj["category_id"]) for obj in annos]
+    classes = torch.tensor(classes, dtype=torch.int64)
+    target.gt_classes = classes
+
+    segms = [obj["segmentation"] for obj in annos]
+
+    if len(annos):
+        if mask_format == "bitmaskmulticlass":
+            masks = BitMasksMulticlass(
+                torch.stack([torch.from_numpy(np.ascontiguousarray(x)) for x in segms])
+            )
+            target.gt_masks = masks
+        elif mask_format == "bitmask":
+            masks = BitMasks(
+                torch.stack([torch.from_numpy(np.ascontiguousarray(x)) for x in segms])
+            )
+            target.gt_masks = masks
+
+    return target
 
 def get_multi_masks(root_dir):
     imglist = glob(os.path.join(root_dir, '*.tif'))
@@ -159,7 +194,7 @@ def get_multi_masks(root_dir):
     return dataset_dicts
 
 class MaskDetectionLoader(DatasetMapper):
-    def __init__(self, cfg, is_train=True, mask_format="bitmask"):
+    def __init__(self, cfg, is_train=True, mask_format="bitmaskmulticlass"):
         super().__init__(cfg, is_train=is_train)
         self.cfg = cfg
         self.mask_format=mask_format
@@ -260,7 +295,7 @@ class MaskDetectionLoader(DatasetMapper):
                 annos.append(obj)
 
         # Convert bounding box annotations to instances.
-        instances = utils.annotations_to_instances(
+        instances = annotations_to_instances(
             annos, image_shape, mask_format=self.mask_format
         )
         

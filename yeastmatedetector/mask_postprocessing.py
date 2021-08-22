@@ -71,8 +71,4 @@ def detector_postprocess(
             results.pred_boxes, output_height, output_width, mask_threshold
         ).tensor  # TODO return ROIMasks/BitMask object in the future
 
-    if results.has("pred_keypoints"):
-        results.pred_keypoints[:, :, 0] *= scale_x
-        results.pred_keypoints[:, :, 1] *= scale_y
-
     return results

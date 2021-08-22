@@ -28,9 +28,13 @@ class BitMasksMulticlass:
             tensor: bool Tensor of N,H,W, representing N instances in the image.
         """
         device = tensor.device if isinstance(tensor, torch.Tensor) else torch.device("cpu")
-        tensor = torch.as_tensor(tensor, dtype=torch.uint8, device=device)
-        assert tensor.dim() == 3, tensor.size()
-        self.image_size = tensor.shape[1:]
+        
+        if type(tensor) == torch.Tensor:
+            self.image_size = tensor.shape[2:]
+        else:
+            tensor = torch.as_tensor(tensor, dtype=torch.uint8, device=device)
+            self.image_size = tensor.shape[1:]
+        
         self.tensor = tensor
 
     @torch.jit.unused
@@ -46,9 +50,7 @@ class BitMasksMulticlass:
         if isinstance(item, int):
             return BitMasksMulticlass(self.tensor[item].view(1, -1))
         m = self.tensor[item]
-        assert m.dim() == 3, "Indexing on BitMasks with {} returns a tensor with shape {}!".format(
-            item, m.shape
-        )
+
         return BitMasksMulticlass(m)
 
     @torch.jit.unused

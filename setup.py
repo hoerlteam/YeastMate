@@ -1,11 +1,12 @@
 import setuptools
+from yeastmatedetector import __version__
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="yeastmatedetector",
-    version="0.11.0",
+    version=__version__,
     author="David Bunk",
     author_email="bunk@bio.lmu.de",
     description="Detector module for YeastMate.",

@@ -5,10 +5,17 @@ import os
 from io import BytesIO
 from http import HTTPStatus
 import argparse
+import platform
+
+# prevent ugly errors on Windows when we quit with Ctrl-C
+# see https://stackoverflow.com/questions/15457786/ctrl-c-crashes-python-after-importing-scipy-stats
+if platform.system() == 'Windows':
+    os.environ['FOR_DISABLE_CONSOLE_CTRL_HANDLER'] = '1'
 
 import torch
 import numpy as np
 from flask import Flask, request
+from waitress import serve
 from tifffile import imread, imsave
 
 from yeastmatedetector import __version__ as yeastmate_version
@@ -18,7 +25,7 @@ from yeastmatedetector.inference import YeastMatePredictor
 if __name__ == '__main__':
 
     argparser = argparse.ArgumentParser()
-    argparser.add_argument('--gpu', type=bool, default=False)
+    argparser.add_argument('--gpu', action='store_true')
     argparser.add_argument('--gpu_index', type=int, default=0)
     argparser.add_argument('--port', type=int, default=11005)
     argparser.add_argument('--config', type=str, default=os.path.join(os.path.split(__file__)[0], 'yeastmatedetector/configs/yeastmate.yaml'))
@@ -35,7 +42,7 @@ if __name__ == '__main__':
     # move model to GPU/CPU
     if args.gpu:
         # check if we have a GPU and the specified GPU index is valid
-        if torch.cuda.is_available() and torch.cuda.device_count > args.gpu_index:
+        if torch.cuda.is_available() and torch.cuda.device_count() > args.gpu_index:
             pred.model.to(torch.device(f'cuda:{args.gpu_index}'))
         else:
             logging.warn(f'GPU:{args.gpu_index} is not available, falling back to CPU detection.')
@@ -106,4 +113,9 @@ if __name__ == '__main__':
 
     # run server, listen for external connections as well
     # TODO: make port settable
-    app.run(host='0.0.0.0', port=args.port, debug=True)
+    # app.run(host='0.0.0.0', port=args.port, debug=False)
+    print(f'Running YeastMate detection server on port {args.port}. Press Ctrl-C to quit.')
+
+    serve(app, host='0.0.0.0', port=args.port)
+
+    print('Shutting down...')

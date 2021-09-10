@@ -85,7 +85,7 @@ class YeastMatePredictor():
 
         if scale_factor != 1.0:
             for key, thing in things.items():
-            things[key]['box'] = [int(x*scale_factor) for x in thing['box']]
+                things[key]['box'] = [int(x*scale_factor) for x in thing['box']]
 
             mask = resize(mask, original_shape, preserve_range=True, anti_aliasing=False, order=0)
 

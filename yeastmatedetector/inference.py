@@ -49,57 +49,18 @@ class YeastMatePredictor():
 
         return image
 
-    def preprocess_img(self, image, norm=True, zstack=False):
-        if zstack:
-            image = image[image.shape[0]//2]
+    @staticmethod
+    def rescale_and_normalize(image, pixel_size, reference_pixel_size=110, lower_quantile=1.5, upper_quantile=98.5)
+        lq, uq = np.percentile(image, [lower_quantile, upper_quantile])
+        image = rescale_intensity(image, in_range=(lq,uq), out_range=(0,1))
+        image = image.astype(np.float32)
 
-        if len(image.shape) > 2:
-            image = image[:,:,0]
+        scale_factor = pixel_size/reference_pixel_size
 
-        if norm:
-            image = image.astype(np.float32)
-            lq, uq = np.percentile(image, [1.5, 98.5])
-            image = rescale_intensity(image, in_range=(lq,uq), out_range=(0,1))
-        else:
-            image = image.astype(np.float32)
-
-        image = self.image_to_tensor(image)
-
+        if scale_factor != 1.0:
+            image = rescale(image, scale_factor, preserve_range=True)
+        
         return image
-
-    def detect(self, image):
-        with torch.no_grad():
-            return self.model([image])[0]['instances']
-
-    def inference(self, image, zstack=False, norm=True):
-
-        image = self.preprocess_img(image, zstack=zstack, norm=norm)
-
-        instances = self.detect(image)
-
-        possible_comps = self.cfg.POSTPROCESSING.POSSIBLE_COMPS
-        optional_object_score_threshold = self.cfg.POSTPROCESSING.OPTIONAL_OBJECT_SCORE_THRESHOLD
-        parent_override_threshold = self.cfg.POSTPROCESSING.PARENT_OVERRIDE_THRESHOLD
-
-        things, mask = things, mask = postproc_multimask(instances, possible_comps, \
-            optional_object_score_threshold=optional_object_score_threshold, parent_override_thresh=parent_override_threshold)
-
-        return things, mask
-
-    def inference_on_folder(self, folder, zstack=False, norm=True):
-
-        #### EXTEND THIS FOR FULL FUNCTIONALITY
-
-        pathlist = glob(os.path.join(folder, '/*.tif')) + glob(os.path.join(folder, '/*.tiff'))
-
-        for path in folder:
-            things, mask = inference(imread(path), zstack=zstack, norm=norm)
-
-            resdict = {'image': os.path.basename(path), 'metadata': {}, 'detections': things}
-
-            imsave(path.replace('.tif', '_mask.tif'), mask)
-            with open(path.replace('.tif', '_detections.json'), 'w') as file:
-                doc = json.dump(resdict, file, indent=1)
 
     @staticmethod
     def postprocess_instances(instances, possible_comps, optional_object_score_threshold=0.15, parent_override_threshold=2, score_thresholds={0:0.9, 1:0.5, 2:0.5}):
@@ -113,5 +74,22 @@ class YeastMatePredictor():
 
         things, mask = postproc_multimask(instances, possible_comps_dict, \
             optional_object_score_threshold=optional_object_score_threshold, parent_override_thresh=parent_override_threshold, score_thresholds=score_thresholds)
+
+        return things, mask
+
+    def inference(self, image, pixel_size=110, reference_pixel_size=110, lower_quantile=1.5, upper_quantile=98.5):
+
+        image = self.rescale_and_normalize(image, pixel_size, reference_pixel_size, lower_quantile, upper_quantile)
+        image = self.image_to_tensor(image)
+
+        with torch.no_grad():
+            instancse = self.model([image])[0]['instances']
+
+        possible_comps = self.cfg.POSTPROCESSING.POSSIBLE_COMPS
+        optional_object_score_threshold = self.cfg.POSTPROCESSING.OPTIONAL_OBJECT_SCORE_THRESHOLD
+        parent_override_threshold = self.cfg.POSTPROCESSING.PARENT_OVERRIDE_THRESHOLD
+
+        things, mask = things, mask = postproc_multimask(instances, possible_comps, \
+            optional_object_score_threshold=optional_object_score_threshold, parent_override_thresh=parent_override_threshold)
 
         return things, mask

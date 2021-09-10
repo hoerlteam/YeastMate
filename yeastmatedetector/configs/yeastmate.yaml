@@ -2,7 +2,7 @@ _BASE_: "./yeastmate_advanced.yaml"
 INPUT_DIR: /home/appuser/input/images  # Set input path with training images.
 OUTPUT_DIR: /home/appuser/output       # Set output path for saved weights.
 MODEL:
-  DEVICE: "cpu"            # 'cpu' for CPU prediction, 'cuda' for GPU prediction
+  DEVICE: "gpu"            # 'cpu' for CPU prediction, 'cuda' for GPU prediction
   ROI_HEADS:
     NUM_CLASSES: 3          # Number of main classes (e.g. 3 for single cell, zygotes and budding events)
     NUM_MASK_CLASSES: 6     # Number of possible sub-classes including background (e.g. 6 for background, single cells, zygote-mother/daughter, budding-mother/daughter)

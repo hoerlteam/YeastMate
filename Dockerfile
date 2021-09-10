@@ -12,8 +12,9 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER appuser
 WORKDIR /home/appuser
 
+ENV PATH="/home/appuser/.local/bin:${PATH}"
 RUN wget https://bootstrap.pypa.io/get-pip.py && \
-	python3 get-pip.py && \
+	python3 get-pip.py --user && \
 	rm get-pip.py
 
 # install dependencies
@@ -28,14 +29,13 @@ RUN python -m pip install --user detectron2==0.5 -f \
   https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.9/index.html
 
 # install yeastmatedetector
-
 ADD yeastmatedetector /home/appuser/YeastMateDetector/yeastmatedetector
 ADD setup.py /home/appuser/YeastMateDetector/setup.py
 ADD README.md /home/appuser/YeastMateDetector/README.md 
-RUN pip install -e --user YeastMateDetector
+RUN pip install --user ./YeastMateDetector
 
 # Set a fixed model cache directory.
 ENV FVCORE_CACHE="/tmp"
 
-# Set workdir and root user
+# Set workdir
 WORKDIR /home/appuser/YeastMateDetector

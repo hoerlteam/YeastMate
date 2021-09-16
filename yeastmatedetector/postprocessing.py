@@ -92,7 +92,7 @@ def _resolve_subobjects(parent_class, scores, possible_compositions,
 
 def postproc_multimask(inst, possible_compositions,
                        optional_object_score_threshold=0.25, parent_override_thresh=2.0,
-                       cls_offset = {1:1, 2:3}, score_thresholds = {0:0.9, 1:0.5, 2:0.5}):
+                       cls_offset = {1:1, 2:3}, score_thresholds = {0:0.9, 1:0.5, 2:0.5}, single_cell_mask_treshold=0.5):
     # TODO: remove cls_offset?
     
     # make sure keys in score_thresholds are int
@@ -106,7 +106,7 @@ def postproc_multimask(inst, possible_compositions,
     masks = [mask.cpu().numpy() for mask in masks]
 
     scores = list(inst.scores)
-    scores = [score.cpu().numpy() for score in scores]
+    scores = [float(score.cpu().numpy()) for score in scores]
 
     classes = list(inst.pred_classes)
     labels = [cls.cpu().numpy() for cls in classes]
@@ -130,7 +130,15 @@ def postproc_multimask(inst, possible_compositions,
 
     for n in range(len(boxes)):
         if labels[n] == 0 and scores[n] > score_thresholds[0]:
-            output_mask[int(boxes[n][1]):int(boxes[n][3]),int(boxes[n][0]):int(boxes[n][2])][masks[n][1][int(boxes[n][1]):int(boxes[n][3]),int(boxes[n][0]):int(boxes[n][2])] > 0.5] = n+1
+
+            x0, y0, x1, y1 = map(int, boxes[n])
+            single_cell_mask_bin = masks[n][1][y0:y1, x0:x1] > single_cell_mask_treshold
+
+            # do not add cells with empty mask after thresholding
+            if single_cell_mask_bin.sum() == 0:
+                continue
+
+            output_mask[y0:y1, x0:x1][single_cell_mask_bin] = n+1
             
             detection = {'box': boxes[n], 'class': [str(0)], 'score': [scores[n]], 'id':str(n+1), 'links':[]}
             detections[str(n+1)] = detection
@@ -161,10 +169,18 @@ def postproc_multimask(inst, possible_compositions,
             
             for j, boxidx in enumerate(inidx):
                 if scores[boxidx] > score_thresholds[0] and labels[boxidx] == 0:
-                    fullmask = masks[n][:,int(boxes[boxidx][1]):int(boxes[boxidx][3]),int(boxes[boxidx][0]):int(boxes[boxidx][2])]
-                    thresh_mask = masks[boxidx][1][int(boxes[boxidx][1]):int(boxes[boxidx][3]),int(boxes[boxidx][0]):int(boxes[boxidx][2])] > 0.
-                    
-                    k = np.mean(fullmask[:,thresh_mask],axis=(1))
+
+                    x0, y0, x1, y1 = map(int, boxes[boxidx])
+
+                    multicellular_mask_slice = masks[n][:, y0:y1, x0:x1]
+                    single_cell_mask_bin = masks[boxidx][1][y0:y1, x0:x1] > single_cell_mask_treshold
+
+                    # ignore single cells with empty masks
+                    # (would lead to NaNs, exceptions during LAP assignment)
+                    if single_cell_mask_bin.sum() == 0:
+                        continue
+
+                    k = np.mean(multicellular_mask_slice[:, single_cell_mask_bin],axis=(1))
                     mask_scores.append(k)
                     accepted_box_idxs.append(j)
             
@@ -176,7 +192,7 @@ def postproc_multimask(inst, possible_compositions,
             res = _resolve_subobjects(int(labels[n]), mask_scores, possible_compositions,
                                       optional_object_score_threshold=optional_object_score_threshold,
                                       parent_override_thresh=parent_override_thresh)
-            
+
             if res is None:
                 continue # TODO: handle
                 

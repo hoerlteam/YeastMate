@@ -1,10 +1,3 @@
-from .ops import paste_masks_in_image
-from .masks import BitMasks
-import detectron2
-
-detectron2.layers.paste_masks_in_image = paste_masks_in_image
-detectron2.structures.BitMasks = BitMasks
-
 import os
 from datetime import datetime
 
@@ -14,10 +7,11 @@ from detectron2.utils.logger import setup_logger
 from detectron2.engine import default_argument_parser, DefaultTrainer, launch, default_setup
 from detectron2.data import build_detection_test_loader, build_detection_train_loader, DatasetCatalog, MetadataCatalog
 
-from .data import MaskDetectionLoader, DictGetter
-from .utils import copy_code, initialize_new_config_values
+from yeastmatedetector.data import MaskDetectionLoader, DictGetter
+from yeastmatedetector.utils import copy_code, initialize_new_config_values
 
-from .models import *
+from yeastmatedetector.models import *
+from yeastmatedetector.multimaskrcnn import *
 
 class Trainer(DefaultTrainer):
     @classmethod

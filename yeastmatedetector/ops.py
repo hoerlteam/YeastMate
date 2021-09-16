@@ -6,7 +6,8 @@ from torch.nn import functional as F
 from detectron2.structures import Boxes
 
 """
-Adapted from detectron2 mask ops; added support for multi-channel mask operations.
+Adapted from detectron2.layers.mask_ops.py (v0.5); added support for multi-channel mask operations.
+# Copyright (c) Facebook, Inc. and its affiliates.
 """
 
 BYTES_PER_FLOAT = 4
@@ -100,9 +101,13 @@ def paste_masks_in_image(
         and height. img_masks[i] is a binary mask for object instance i.
     """
 
+    # override thresholding of masks
     threshold = -1
 
     assert masks.shape[-1] == masks.shape[-2], "Only square mask predictions are supported"
+    
+    C = masks.shape[1]
+    
     N = len(masks)
     if N == 0:
         return masks.new_empty((0,) + image_shape, dtype=torch.uint8)
@@ -129,7 +134,7 @@ def paste_masks_in_image(
     chunks = torch.chunk(torch.arange(N, device=device), num_chunks)
 
     img_masks = torch.zeros(
-        N, 6, img_h, img_w, device=device, dtype=torch.bool if threshold >= 0 else torch.float16
+        N, C, img_h, img_w, device=device, dtype=torch.bool if threshold >= 0 else torch.float16
     )
     for inds in chunks:
         masks_chunk, spatial_inds = _do_paste_mask(

@@ -1,0 +1,17 @@
+name: yeastmate
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - cudatoolkit=10.2
+  - pip
+  - pytorch=1.9.0
+  - torchaudio
+  - torchvision
+  - pywin32
+  - flask
+  - scikit-image
+  - imgaug
+  - waitress
+  - pip:
+    - git+https://github.com/facebookresearch/detectron2.git@v0.5

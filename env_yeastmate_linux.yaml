@@ -1,17 +1,17 @@
 name: yeastmate
 channels:
-  - pytorch
   - defaults
+  - pytorch
 dependencies:
   - python=3.9.*
   - cudatoolkit=10.2
   - pip
   - pytorch=1.9.0
-  - torchaudio=0.9.0
-  - torchvision=0.10.0
-  - flask=1.1.2
-  - scikit-image=0.18.1
-  - imgaug=0.4.0
-  - waitress=2.0.0
+  - torchaudio
+  - torchvision
   - pip:
+    - flask
+    - scikit-image
+    - imgaug
+    - waitress
     - https://dl.fbaipublicfiles.com/detectron2/wheels/cu102/torch1.9/detectron2-0.5%2Bcu102-cp39-cp39-linux_x86_64.whl

@@ -12,7 +12,7 @@ setuptools.setup(
     description="Detector module for YeastMate.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/CALM-LMU/YeastMateDetector",
+    url="https://github.com/hoerlteam/YeastMateDetector",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

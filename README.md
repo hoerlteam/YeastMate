@@ -1,1 +1,1 @@
-# YeastMateDetector
+# YeastMate

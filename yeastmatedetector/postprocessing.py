@@ -233,6 +233,10 @@ def postproc_multimask(inst, possible_compositions,
             detections[str(n+1)] = detection
 
     _cleanup_multiple_assignments(detections, possible_compositions, cls_offset)
+    
+    for v in detections.values():
+        v['box'] = tuple(map(int, v['box']))
+    
     return detections, output_mask
 
 def _cleanup_multiple_assignments(detections, possible_compositions, cls_offset = {1:1, 2:3}):

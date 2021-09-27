@@ -107,7 +107,7 @@ class YeastMatePredictor():
 
         things, mask = things, mask = self.postprocess_instances(instances, possible_comps, \
             optional_object_score_threshold=optional_object_score_threshold, \
-                parent_override_thresh=parent_override_threshold, \
+                parent_override_threshold=parent_override_threshold, \
                     score_thresholds=score_thresholds)
 
         things, mask = self.unscale_results(things, mask, original_shape)

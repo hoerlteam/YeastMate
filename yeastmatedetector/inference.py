@@ -105,7 +105,7 @@ class YeastMatePredictor():
         optional_object_score_threshold = self.cfg.POSTPROCESSING.OPTIONAL_OBJECT_SCORE_THRESHOLD
         parent_override_threshold = self.cfg.POSTPROCESSING.PARENT_OVERRIDE_THRESHOLD
 
-        things, mask = things, mask = postproc_multimask(instances, possible_comps, \
+        things, mask = things, mask = self.postprocess_instances(instances, possible_comps, \
             optional_object_score_threshold=optional_object_score_threshold, \
                 parent_override_thresh=parent_override_threshold, \
                     score_thresholds=score_thresholds)

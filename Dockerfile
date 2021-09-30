@@ -30,6 +30,8 @@ RUN python -m pip install --user detectron2==0.5 -f \
 
 # install yeastmatedetector
 ADD yeastmatedetector /home/appuser/YeastMate/yeastmatedetector
+ADD train.py /home/appuser/YeastMate/train.py
+ADD yeastmate_server.py /home/appuser/YeastMate/yeastmate_server.py
 ADD setup.py /home/appuser/YeastMate/setup.py
 ADD README.md /home/appuser/YeastMate/README.md 
 RUN pip install --user ./YeastMate

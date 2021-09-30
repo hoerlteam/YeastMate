@@ -2,3 +2,5 @@ scikit-image
 imgaug
 numpy
 scipy
+flask
+waitress

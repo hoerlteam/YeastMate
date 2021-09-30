@@ -25,5 +25,7 @@ setuptools.setup(
         "imgaug",
         "numpy",
         'scipy',
+        'flask',
+        'waitress'
     ]
 )

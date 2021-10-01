@@ -92,7 +92,7 @@ class YeastMatePredictor():
         return things, mask
 
 
-    def inference(self, image, score_thresholds = {0:0.9, 1:0.5, 2:0.5}, pixel_size=110, reference_pixel_size=110, lower_quantile=1.5, upper_quantile=98.5):
+    def inference(self, image, score_thresholds = {0:0.9, 1:0.75, 2:0.75}, pixel_size=110, reference_pixel_size=110, lower_quantile=1.5, upper_quantile=98.5):
 
         original_shape = image.shape
         image = self.rescale_and_normalize(image, pixel_size, reference_pixel_size, lower_quantile, upper_quantile)

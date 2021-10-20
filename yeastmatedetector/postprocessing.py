@@ -234,7 +234,7 @@ def postproc_multimask(inst, possible_compositions,
                 sub_detection['class'].append(class_idx)
                 sub_detection['score'].append(scores[n])
 
-                sub_detection['links'].append(counter)
+                sub_detection['links'].append(str(counter))
 
                 detections[str(mapped_idx)] = sub_detection
                 links.append(str(mapped_idx))

@@ -93,8 +93,7 @@ def _resolve_subobjects(parent_class, scores, possible_compositions,
 def postproc_multimask(inst, possible_compositions,
                        optional_object_score_threshold=0.25, parent_override_thresh=2.0,
                        cls_offset = {1:1, 2:3}, score_thresholds = {0:0.9, 1:0.5, 2:0.5}, single_cell_mask_treshold=0.5):
-    # TODO: remove cls_offset?
-    
+
     # make sure keys in score_thresholds are int
     # (might be str if we read directly from JSON)
     score_thresholds = {int(k): v for k, v in score_thresholds.items()}
@@ -128,6 +127,11 @@ def postproc_multimask(inst, possible_compositions,
     # -> we do not want to assign them to another compond object
     assigned_subobject_idxs = set()
 
+    # for continuous label img:
+    # we count from one, but keep map to original idxs
+    id_map = {}
+    counter = 1
+
     for n in range(len(boxes)):
         if labels[n] == 0 and scores[n] > score_thresholds[0]:
 
@@ -138,10 +142,14 @@ def postproc_multimask(inst, possible_compositions,
             if single_cell_mask_bin.sum() == 0:
                 continue
 
-            output_mask[y0:y1, x0:x1][single_cell_mask_bin] = n+1
+            id_map[n] = counter
+
+            output_mask[y0:y1, x0:x1][single_cell_mask_bin] = counter
             
-            detection = {'box': boxes[n], 'class': [str(0)], 'score': [scores[n]], 'id':str(n+1), 'links':[]}
-            detections[str(n+1)] = detection
+            detection = {'box': boxes[n], 'class': [str(0)], 'score': [scores[n]], 'id':str(counter), 'links':[]}
+            detections[str(counter)] = detection
+
+            counter += 1
 
     for n in range(len(boxes)):
         if int(labels[n]) in possible_compositions:
@@ -150,7 +158,7 @@ def postproc_multimask(inst, possible_compositions,
             if scores[n] < score_thresholds[int(labels[n])]:
                 continue
 
-            detection = {'box': boxes[n], 'class': [str(int(labels[n]))], 'score': [scores[n]], 'links':[], 'id':str(n+1)}
+            detection = {'box': boxes[n], 'class': [str(int(labels[n]))], 'score': [scores[n]], 'links':[], 'id':str(counter)}
 
             box_min = [boxes[n][0],boxes[n][1]]
             box_max = [boxes[n][2],boxes[n][3]]
@@ -210,6 +218,7 @@ def postproc_multimask(inst, possible_compositions,
                 off = 0 if final_parent_class not in cls_offset else cls_offset[final_parent_class]
 
                 sub_id = inidx[accepted_box_idxs[obj]]
+                mapped_idx = id_map[sub_id]
 
                 # mark to ignore this object for further assignments
                 # as it is already in this compound object
@@ -218,19 +227,22 @@ def postproc_multimask(inst, possible_compositions,
                 class_idx = str(final_parent_class) + '.' + str(int(cls-off))
 
                 # get existing single cell object
-                sub_detection = detections[str(sub_id+1)]
+                sub_detection = detections[str(mapped_idx)]
 
                 # add new class and score and link to compound object
                 # NB: the score here is the score of parent compound object
                 sub_detection['class'].append(class_idx)
                 sub_detection['score'].append(scores[n])
-                sub_detection['links'].append(str(n+1))
 
-                detections[str(sub_id+1)] = sub_detection
-                links.append(str(sub_id+1))
+                sub_detection['links'].append(str(counter))
+
+                detections[str(mapped_idx)] = sub_detection
+                links.append(str(mapped_idx))
 
             detection['links'] = links
-            detections[str(n+1)] = detection
+            detections[str(counter)] = detection
+
+            counter += 1
 
     _cleanup_multiple_assignments(detections, possible_compositions, cls_offset)
     

@@ -8,7 +8,7 @@ Check out our detailed documentation at https://yeastmate.readthedocs.org
 
 You can find the Fiji backend at https://github.com/hoerlteam/YeastMateFiji
 
-and the frontend and IO backend of the installable version at
+and the code repositories of the frontend and IO backends (for the GUI version) at
 
 https://github.com/hoerlteam/YeastMateFrontend
 

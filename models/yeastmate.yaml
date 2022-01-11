@@ -2,6 +2,7 @@ _BASE_: "./yeastmate_advanced.yaml"
 INPUT_DIR: /home/appuser/input/images  # Set input path with training images.
 OUTPUT_DIR: /home/appuser/output       # Set output path for saved weights.
 MODEL:
+  WEIGHTS: "https://osf.io/2xr4m/download"     # File or download path to a model snapshot to continue training on, leave blank to start from scratch
   DEVICE: "cuda"            # 'cpu' for CPU prediction, 'cuda' for GPU prediction
   ROI_HEADS:
     NUM_CLASSES: 3          # Number of main classes (e.g. 3 for single cell, zygotes and budding events)
